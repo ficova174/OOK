@@ -3,43 +3,64 @@ import Levenshtein
 
 # Partie émission
 
-def codageBinaire(nombre:int, taillePaquet:int) -> str:  # attention on lit de gauche à droite
+def codageBinaire(nombre:int, taillePaquet:int) -> str:
+    """
+    nombre décimal -> nombre en binaire
+    attention on code de gauche à droite (petites puissances à gauche)
+    """
     nombreBin = ''
     while nombre > 0:
         nombreBin += str(nombre % 2)
         nombre //= 2
-    while len(nombreBin) < taillePaquet:  # cas code ASCII trop faible, on veut toutes nos lettres sur 8 valeurs pour le décodage
+    while len(nombreBin) < taillePaquet: # on veut une taille fixe, on ajoute des 0
         nombreBin += '0'
     return nombreBin
 
 def encodage(message:str, taillePaquet:int) -> str:
-    # on le code en chaine de caractères pour utiliser .find() dans le décodage
+    """
+    message texte (str) -> message en binaire (str)
+    on demande la taille des paquets car on utilisera cette fonction pour coder des strings de longueur variable (accroche et ID)
+    """
     messageBin = ''
     for lettre in message:
-        lettre = ord(lettre)  # ASCII décimal (int)
-        messageBin += codageBinaire(lettre, taillePaquet)  # car codage base 4 renvoit une liste
+        lettre = ord(lettre) # ASCII décimal (int)
+        messageBin += codageBinaire(lettre, taillePaquet)
     return messageBin
 
 def creationAccroche(lettre:str) -> str:
+    """
+    on créée une succesion improbable
+    on lui donne un identifiant pour estimer le début du message (fonction detectionAccroche())
+    """
     accroche = ''
-    for k in range(8):  # car 8 valeurs possibles de id
-        id = codageBinaire(k, 3)  # Sera codé sur 3 bits (8 valeurs possibles)
-        accroche += encodage(lettre, 8) + id  # Chaque accroche est répétée et identifiée
+    for k in range(8): # car 8 valeurs possibles de id
+        id = codageBinaire(k, 3) # id codé sur 3 bits (8 valeurs possibles)
+        accroche += encodage(lettre, 8) + id # accroche est répétée et possède un identifiant unique
     return accroche
 
 # Codage Manchester (IEEE 802.3)
 def codageManchester(messageBin:str) -> str:
-    clock = [k%2 for k in range(1, 2*len(messageBin)+1)]  # On commence à 1 pour que clock commence par 1
+    """
+    pour synchroniser l'émetteur et le récepteur (savoir combien de 0 ou de 1 on reçoit d'affilé) on utilise le codage Manchester
+    le message codé est synchrone, il contient l'horloge en lui en plus du message
+    pour chaque bit du message, l'horloge fait une transition (donc deux valeurs)
+    se référer à l'illustration sur Wikipedia de la page sur le codage Manchester (version anglophone)
+    """
+    horloge = [k%2 for k in range(1, 2*len(messageBin)+1)] # On commence à 1 pour que l'horloge commence par 1
     messageMan = ""
-    for k in range(len(messageBin)):
-        for i in range(2*k, 2*(k+1)):
-            if int(messageBin[k]) != clock[i]:
+    for indiceBit in range(len(messageBin)):
+        for indiceHorloge in range(2*indiceBit, 2*(indiceBit+1)):
+            if int(messageBin[indiceBit]) != horloge[indiceHorloge]:
                 messageMan += "1"
             else:
                 messageMan += "0"
     return messageMan
 
 def ook(messageMan:str, tensionMin:int, tensionMax:int, N:int) -> list:
+    """
+    transforme le message codé (Manchester) en valeurs de tension pour les LEDS
+    on utilise la modulation on-off keying (OOK)
+    """
     tension = []
     for byte in messageMan:
         if byte == '0':
@@ -52,20 +73,28 @@ def ook(messageMan:str, tensionMin:int, tensionMax:int, N:int) -> list:
     return np.array(tension, dtype=np.float32)
 
 def emission(message:str, tensionMin:int, tensionMax:int, N:int, startMan:str, endMan:str) -> list:
-    messageMan = startMan + codageManchester(encodage(message, 8)) + endMan
+    messageMan = startMan + codageManchester(encodage(message, 8)) + endMan # accroches ajoutées au message
     return ook(messageMan, tensionMin, tensionMax, N)
 
 
 # Partie réception
 # ATTENTION le message sera à l'envers car les infos envoyées en premières seront reçues en première
 
-def codageBaseDix(lettre:str) -> int:  # ATTENTION message à l'endroit (droites petites puissances) comme dit précédemment
+def codageBaseDix(byte:str) -> int:
+    """
+    nombre binaire -> nombre décimal
+    attention on code de gauche à droite (petites puissances à gauche)
+    """
     asciiDecimal = 0
-    for k in range(len(lettre)):
-        asciiDecimal += int(lettre[k]) * (2 ** k)  # A VERIFIER (n-k) au lieu de k
+    for bit in range(len(byte)):
+        asciiDecimal += int(byte[bit]) * (2 ** bit) # A VERIFIER (n-k) au lieu de k
     return asciiDecimal
 
 def mostCommon(liste:list, type:str):
+    """
+    trouve l'élément le plus commun d'une liste
+    on peut choisir le datatype renvoyé
+    """
     if liste == []:
         print('Erreur : la liste est vide')
         return -1
@@ -93,8 +122,12 @@ def mostCommon(liste:list, type:str):
     else:
         print("Mauvais datatype sélectionné : choisir int, float ou str")
 
-# La fonction ne fait pas des paquets parfait mais elle découpe la liste de la manière la plus optimale possible
 def decoupeListe(dividedSignal:list, tension:list, size:int):
+    """
+    découpe la liste des tension reçues en morceau de tailles prédéfinis
+    la fonction ne fait pas des paquets parfait mais elle découpe la liste de la manière la plus optimale possible
+    elle fonction en utilisant l'effet de bord des listes
+    """
     lenT = len(tension)
     if lenT <= size:
         dividedSignal.append(tension)
@@ -104,10 +137,17 @@ def decoupeListe(dividedSignal:list, tension:list, size:int):
         decoupeListe(dividedSignal, tension[lenT2:], size)
 
 def voltageToBinary(tension:list, N_reception:int, nb_bits:int) -> str:
+    """
+    cette fonction normalise les valeurs de tensions reçues
+    on découpe la liste tension car des variations de luminosité ambiante rendraient la fonction inopérante
+    le principal défi est d'avoir des variations importantes dans chacun des morceaux sinon on perd de l'information
+    la taille des morceaux dépend de son nombre de bits et de la fréquence d'échantillonnage
+    """
     signalBinMan = ''
-    dividedSignal = [] # On utilise l'effet de bord
+    dividedSignal = []
     size = N_reception * nb_bits
     decoupeListe(dividedSignal, tension, size)
+
     for morceau in dividedSignal:
         tensionMax = np.max(morceau)
         tensionMin = np.min(morceau)
@@ -122,20 +162,26 @@ def voltageToBinary(tension:list, N_reception:int, nb_bits:int) -> str:
             min = tensionMin/tensionMax
             milieu = (1 + min)/2
             for i in range(len(morceau)):
-                if morceau[i] > milieu:  # Et si notre tension tombe pile sur le milieu ??
+                if morceau[i] > milieu:
                     signalBinMan += '1'
                 else:
                     signalBinMan += '0'
     return signalBinMan
 
 def chercheMotifLevenshtein(signalBinMan:str, motif:str, maxErreursMotif:int, N_reception:int) -> list:
-    # Calcule la distance de Levenshtein entre accrocheBinMan envoyé et accrocheBinMan reçue
+    """
+    on cherche l'accroche, or celle-ci n'a pas été transmise parfaitement
+    on doit alors accepter un certains nombre d'erreurs dans le motif de l'accroche (id pas de problème)
+    on utilise la distance de Levenshtein pour connaitre ce nombre d'erreurs
+    on renvoie la liste des indices de début des motifs avec autant ou moins d'erreurs que maxErreurMotif
+    chaque bit est répété N_reception fois (la période d'échantillonage)
+    """
     # motif = motifBinManDouble
-    maxErreurs = maxErreursMotif*N_reception # car les id d'accroche ont le droit d'avoir des 
+    maxErreurs = maxErreursMotif*N_reception
     lenAccroche = len(motif) + 3*N_reception
 
     listeIndicesAccroche = []
-    for indice in range(len(signalBinMan) - lenAccroche): # on enleve taille dernière accroche
+    for indice in range(len(signalBinMan) - lenAccroche): # on enlève taille dernière accroche
         if Levenshtein.distance(signalBinMan[indice:indice+lenAccroche], motif) <= maxErreurs:
             listeIndicesAccroche.append(indice)
     return listeIndicesAccroche
@@ -159,6 +205,10 @@ def chercheMotifLevenshtein(signalBinMan:str, motif:str, maxErreursMotif:int, N_
     return listeIndicesAccroche """
 
 def position(signalBinMan:str, N_reception:int, motif:str, role:str, maxErreursMotif:int) -> int:
+    """
+    prédis la position de début/fin du message dans signalBinMan grâce à l'identifiant des accroches
+    en effet on connait la taille des motifs et le nombre total de (motif + id) -> 8
+    """
     positionAccroche = []
     N_reception8 = 8*N_reception
     N_reception11 = 11*N_reception
@@ -175,20 +225,22 @@ def position(signalBinMan:str, N_reception:int, motif:str, role:str, maxErreursM
         id = codageBaseDix(idBin)
         if 0 <= id < 8:
             if role == 'start':
-                start = indiceAccroche + (8 - id)*N_reception11  # 11 = taille de chaque répétition avec son id, 8 = nombre de répétition de l'accroche
+                start = indiceAccroche + (8 - id)*N_reception11 # 11 = taille de chaque motif avec son id, 8 = nombre de motifs de l'accroche
                 positionAccroche.append(start)
             elif role == 'end':
                 end = indiceAccroche - id*N_reception11
                 positionAccroche.append(end)
             else:
-                print(f'Erreur : {role} n\'est pas un role valide (start ou end)')
+                print(f'Erreur : {role} n\'est pas un rôle valide (start ou end)')
                 return -1
         else:
             print('Erreur : id pas dans intervalle (pas grave)')
-    return mostCommon(positionAccroche, 'int') # Donne l'élément le plus commun de la liste
+    return mostCommon(positionAccroche, 'int')
 
 def detectionAccroche(signalBinMan:str, N_reception:int, startMan:str, endMan:str, maxErreursMotif:int) -> str:
-    # rajouter décodage du code correcteur + si trop de bruit, redemander l'envoie des données
+    """
+    slice le signal binaire (toujours codé en Manchester) pour ne garder que le message sans les accroches
+    """
     startDoublonsMan = ''
     endDoublonsMan = ''
 
@@ -209,7 +261,12 @@ def detectionAccroche(signalBinMan:str, N_reception:int, startMan:str, endMan:st
     return signalBinMan[start:end]
 
 def demodulation(tension:list, N_reception:int, nb_bits:int, startMan:str, endMan:str, maxErreursMotif:int) -> str:
-    tension = tension[0] # super bizarre sys.entree me renvoie une liste avec une seule liste tension à l'intérieur (liste de liste)
+    """
+    on extraie le message binaire (sans les accroches) de la liste des tensions
+    on enlève les répétitions causé par la fréquence d'échantillonnage N_reception
+    si les valeurs sont légérement différente, on prend la plus commune
+    """
+    tension = tension[0] #sys.entree me renvoie une liste avec un tableau unidimensionnel de tension à l'intérieur
     tension = tension[::-1] # pour remettre le message à l'endroit
     tension = np.array([np.round(element, 1) for element in tension]) # on arrondit les éléments pour la suite
     
@@ -223,21 +280,24 @@ def demodulation(tension:list, N_reception:int, nb_bits:int, startMan:str, endMa
         for element in signalBinMan:
             f.write(f"{element}\n")
 
-    messageBinManDouble = detectionAccroche(signalBinMan, N_reception, startMan, endMan, maxErreursMotif) # chaque bit est répété N_reception fois par rapport au message Man envoyé, on veut enlever les doublons
+    messageBinManDouble = detectionAccroche(signalBinMan, N_reception, startMan, endMan, maxErreursMotif) # chaque bit est répété N_reception fois par rapport au message Man envoyé
 
     messageBinMan = '' # on enlève les doublons
     valeursBit = [int(messageBinManDouble[0])]
     for indice in range(1, len(messageBinManDouble)):
         if indice % N_reception == 0:
-            messageBinMan += mostCommon(valeursBit, 'str') # Donne l'élément le plus commun de la liste
+            messageBinMan += mostCommon(valeursBit, 'str')
             valeursBit = [int(messageBinManDouble[indice])]
         else:
             valeursBit.append(int(messageBinManDouble[indice]))
     return messageBinMan
 
 def decodageMan(messageBinMan:str) -> str:
+    """
+    se référer à l'illustration sur Wikipedia de la page sur le codage Manchester (version anglophone)
+    """
     messageBin = ''
-    for k in range(0, len(messageBinMan), 2): # car un 0 est codé par N points et pas de 2 car on saute la transition
+    for k in range(0, len(messageBinMan), 2): # pas de 2 car on saute la transition
         if messageBinMan[k] == '0': # transition 0 --> 1
             messageBin += '1'
         else: # transition 1 --> 0
@@ -245,6 +305,9 @@ def decodageMan(messageBinMan:str) -> str:
     return messageBin
 
 def decodageASCII(messageBin:str) -> str:
+    """
+    message binaire -> texte ASCII
+    """
     messageTransmis = ''
     for posLettre in range(0, len(messageBin), 8):
         messageTransmis += chr(codageBaseDix(messageBin[posLettre:posLettre+8]))
