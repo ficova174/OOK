@@ -14,9 +14,12 @@ N = int(temissionBit/techantSortie)  # nombre de points représentant 1 bit
 message = 'jellooo'
 startMan = codageManchester(creationAccroche('a'))
 endMan = codageManchester(creationAccroche('z'))
-
+print(N)
 signal = emission(message, tensionMin, tensionMax, N, startMan, endMan)
-print(signal)
+
+with open("emission.txt", "w", encoding="utf-8") as f:
+        for element in signal:
+            f.write(f"{element}\n")
 
 sys.config_sortie(1, techantSortie*1e6, signal)  # en microsecondes et non périodique
 sys.declencher_sorties(1, 0)
@@ -47,14 +50,16 @@ sys.fermer()
 
 # Résultats
 
-demodule = demodulation(tensions, N_reception, 4, startMan, endMan)
+print(N_reception)
+
+demodule = demodulation(tensions, N_reception, 65, startMan, endMan)
 print(demodule)
 decode = decodageMan(demodule)
 print(decode)
 deascii = decodageASCII(decode)
 print(deascii)
 
-print(reception(tensions, N_reception, 4, startMan, endMan))
+# print(reception(tensions, N_reception, 100, startMan, endMan))
 
 # Ce qu'on envoie aux LEDs
 

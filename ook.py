@@ -1,4 +1,5 @@
 import numpy as np
+import Levenshtein
 
 # Partie émission
 
@@ -54,6 +55,7 @@ def emission(message:str, tensionMin:int, tensionMax:int, N:int, startMan:str, e
     messageMan = startMan + codageManchester(encodage(message, 8)) + endMan
     return ook(messageMan, tensionMin, tensionMax, N)
 
+
 # Partie réception
 # ATTENTION le message sera à l'envers car les infos envoyées en premières seront reçues en première
 
@@ -63,7 +65,7 @@ def codageBaseDix(messageBin:str) -> int:  # ATTENTION message à l'endroit (dro
         asciiDecimal += int(messageBin[k]) * (2 ** k)  # A VERIFIER (n-k) au lieu de k
     return asciiDecimal
 
-def mostCommon(liste:list, type:float) -> int:
+def mostCommon(liste:list, type:str):
     dict = {}
     for element in liste:
         if element not in dict:
@@ -77,20 +79,25 @@ def mostCommon(liste:list, type:float) -> int:
         if dict[element] > nbApparitionMax:
             elementMax = element
             nbApparitionMax = dict[element]
-    if type == "int" or type == "float":
+    
+    if type == "float":
         return elementMax
+    elif type == "int":
+        return int(elementMax)
     elif type == "string":
         return str(elementMax)
     else:
         print("Mauvais datatype sélectionné : choisir int, float ou str")
 
 # La fonction ne fait pas des paquets parfait mais elle découpe la liste de la manière la plus optimale possible
-def decoupeListe(dividedSignal:list, tension:list, size:int) -> list:
+def decoupeListe(dividedSignal:list, tension:list, size:int):
     lenT = len(tension)
-    lenT2 = lenT//2
     if lenT <= size:
-        return dividedSignal.append(tension)
-    return decoupeListe(dividedSignal, tension[:lenT2], size), decoupeListe(dividedSignal, tension[lenT2:], size)
+        dividedSignal.append(tension)
+    else:
+        lenT2 = lenT//2
+        decoupeListe(dividedSignal, tension[:lenT2], size)
+        decoupeListe(dividedSignal, tension[lenT2:], size)
 
 def voltageToBinary(tension:list, N_reception:int, nb_bits:int) -> str:
     signalBinMan = ''
@@ -98,21 +105,16 @@ def voltageToBinary(tension:list, N_reception:int, nb_bits:int) -> str:
     size = N_reception * nb_bits
     decoupeListe(dividedSignal, tension, size)
     for morceau in dividedSignal:
-        tensionMax = float('-inf')
-        tensionMin = float('inf')
-        for tension in morceau:
-            if tension > tensionMax:
-                tensionMax = tension
-            elif tension < tensionMin:
-                tensionMin = tension
+        tensionMax = np.max(morceau)
+        tensionMin = np.min(morceau)
 
-        if tensionMin == tensionMax:
+        if tensionMax == 0:
+            signalBinMan += '0'*len(morceau)
+        elif (tensionMax - tensionMin) < 0.5:
             print(f'Attention le morceau CODANT {morceau} dans voltageToBinary ne possède pas de variation de tension')
             signalBinMan += '0'*len(morceau) # Arbitraire on aurait pu prendre 1
         else:
-            for i in range(len(morceau)):
-                morceau[i] /= tensionMax
-
+            morceau = morceau/tensionMax
             min = tensionMin/tensionMax
             milieu = (1 + min)/2
             for i in range(len(morceau)):
@@ -122,12 +124,30 @@ def voltageToBinary(tension:list, N_reception:int, nb_bits:int) -> str:
                     signalBinMan += '0'
     return signalBinMan
 
-# Autoriser quelques erreurs sur l'accroche
-def position(signalBinMan:str, N_reception:int, motif:str, role:str) -> int:
-    if role != 'start' or role != 'end':
-        print(f'Erreur : {role} n\'est pas un role valide (start ou end)')
-        return 0
+def compareBinaryStrings(accrocheMotifOriginal:str, accrocheMotifRecu:str, maxErreursMotif:int, N_reception:int) -> bool:
+    # Calcule la distance de Levenshtein entre accrocheBinMan envoyé et accrocheBinMan reçue
+    maxErreurs = maxErreursMotif*N_reception # car les id d'accroche ont le droit d'avoir des 
     
+    if Levenshtein.distance(accrocheMotifOriginal, accrocheMotifRecu) <= maxErreurs:
+        return True
+    return False
+
+def chercheMotifErreurs(signalBinMan:list, motif:list, maxErreursMotif: int, N_reception:int) -> int:
+    # motif = motifBinManDouble
+    if maxErreursMotif < 1 or type(maxErreursMotif) != int or maxErreursMotif >= len(motif):
+        print('Erreur valeur maxErreursMotif')
+        return -1
+    
+    compteurErreurs = 0
+    indice = 0
+    while indice != len(signalBinMan):
+        accrocheTrouvee = True
+        for k in range(len(motif)):
+            if 
+
+
+
+def position(signalBinMan:str, N_reception:int, motif:str, role:str) -> int:
     positionAccroche = []
     N_reception8 = 8*N_reception
     N_reception11 = 11*N_reception
@@ -159,7 +179,7 @@ def position(signalBinMan:str, N_reception:int, motif:str, role:str) -> int:
     if positionAccroche == []:
         return 'Message corrompu, aucune accroche trouvée'
     else:
-        return mostCommon(positionAccroche, "int")  # Donne l'élément le plus commun de la liste
+        return mostCommon(positionAccroche, 'int')  # Donne l'élément le plus commun de la liste
 
 def detectionAccroche(signalBinMan:str, N_reception:int, startMan:str, endMan:str) -> str:
     # rajouter décodage du code correcteur + si trop de bruit, redemander l'envoie des données
@@ -173,6 +193,10 @@ def detectionAccroche(signalBinMan:str, N_reception:int, startMan:str, endMan:st
     motifStart = startDoublonsMan[:N_reception*8]
     motifEnd = endDoublonsMan[:N_reception*8]
 
+    with open("start.txt", "w", encoding="utf-8") as f:
+        for element in motifStart:
+            f.write(f"{element}")
+
     start = position(signalBinMan, N_reception, motifStart, 'start')
     end = position(signalBinMan, N_reception, motifEnd, 'end')
 
@@ -181,14 +205,25 @@ def detectionAccroche(signalBinMan:str, N_reception:int, startMan:str, endMan:st
 def demodulation(tension:list, N_reception:int, nb_bits:int, startMan:str, endMan:str) -> str:
     tension = tension[0]  # super bizarre sys.entree me renvoie une liste avec une seule liste tension à l'intérieur (liste de liste)
     tension = tension[::-1]  # pour remettre le message à l'endroit
+    tension = np.array([np.round(element, 1) for element in tension]) # on arrondit les éléments pour la suite
+    
+    with open("tension.txt", "w", encoding="utf-8") as f:
+        for element in tension:
+            f.write(f"{element}\n")
+
     signalBinMan = voltageToBinary(tension, N_reception, nb_bits)
+
+    with open("acqui.txt", "w", encoding="utf-8") as f:
+        for element in signalBinMan:
+            f.write(f"{element}\n")
+
     messageBinManDouble = detectionAccroche(signalBinMan, N_reception, startMan, endMan)  # chaque bit est répété N_reception fois par rapport au message Man envoyé, on veut enlever les doublons
 
     messageBinMan = ''  # on enlève les doublons
     valeursBit = [int(messageBinManDouble[0])]
     for indice in range(1, len(messageBinManDouble)):
         if indice % N_reception == 0:
-            messageBinMan += mostCommon(valeursBit, "str")  # Donne l'élément le plus commun de la liste
+            messageBinMan += mostCommon(valeursBit, 'str')  # Donne l'élément le plus commun de la liste
             valeursBit = [int(messageBinManDouble[indice])]
         else:
             valeursBit.append(int(messageBinManDouble[indice]))
