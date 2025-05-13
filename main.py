@@ -52,14 +52,14 @@ sys.fermer()
 
 print(N_reception)
 
-demodule = demodulation(tensions, N_reception, 65, startMan, endMan)
+demodule = demodulation(tensions, N_reception, 65, startMan, endMan, 2*N_reception)
 print(demodule)
 decode = decodageMan(demodule)
 print(decode)
 deascii = decodageASCII(decode)
 print(deascii)
 
-# print(reception(tensions, N_reception, 100, startMan, endMan))
+# print(reception(tensions, N_reception, 65, startMan, endMan, 2*N_reception))
 
 # Ce qu'on envoie aux LEDs
 

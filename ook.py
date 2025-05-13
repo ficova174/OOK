@@ -124,64 +124,66 @@ def voltageToBinary(tension:list, N_reception:int, nb_bits:int) -> str:
                     signalBinMan += '0'
     return signalBinMan
 
-def compareBinaryStrings(accrocheMotifOriginal:str, accrocheMotifRecu:str, maxErreursMotif:int, N_reception:int) -> bool:
+def chercheMotifLevenshtein(signalBinMan:str, motif:str, maxErreursMotif:int, N_reception:int) -> list:
     # Calcule la distance de Levenshtein entre accrocheBinMan envoyé et accrocheBinMan reçue
+    # motif = motifBinManDouble
     maxErreurs = maxErreursMotif*N_reception # car les id d'accroche ont le droit d'avoir des 
-    
-    if Levenshtein.distance(accrocheMotifOriginal, accrocheMotifRecu) <= maxErreurs:
-        return True
-    return False
+    lenAccroche = len(motif) + 3*N_reception
 
-def chercheMotifErreurs(signalBinMan:list, motif:list, maxErreursMotif: int, N_reception:int) -> int:
+    listeIndicesAccroche = []
+    for indice in range(len(signalBinMan) - lenAccroche): # on enleve taille dernière accroche
+        if Levenshtein.distance(signalBinMan[indice:indice+lenAccroche], motif) <= maxErreurs:
+            listeIndicesAccroche.append(indice)
+    return listeIndicesAccroche
+
+""" def chercheMotifErreurs(signalBinMan:list, motif:list, maxErreursMotif:int) -> list:
     # motif = motifBinManDouble
     if maxErreursMotif < 1 or type(maxErreursMotif) != int or maxErreursMotif >= len(motif):
         print('Erreur valeur maxErreursMotif')
         return -1
     
-    compteurErreurs = 0
-    indice = 0
-    while indice != len(signalBinMan):
-        accrocheTrouvee = True
-        for k in range(len(motif)):
-            if 
+    listeIndicesAccroche = []
+    for indice in range(len(signalBinMan)):
+        compteurErreurs = 0
+        k = 0
+        while (compteurErreurs < maxErreursMotif) and (k < len(motif)) and (indice <= len(signalBinMan) - len(motif)):
+            if signalBinMan[indice+k] != motif[k]:
+                compteurErreurs += 1
+            k += 1
+        if (k == len(motif)) and (compteurErreurs < maxErreursMotif):
+            listeIndicesAccroche.append(indice)
+    return listeIndicesAccroche """
 
-
-
-def position(signalBinMan:str, N_reception:int, motif:str, role:str) -> int:
+def position(signalBinMan:str, N_reception:int, motif:str, role:str, maxErreursMotif:int) -> int:
     positionAccroche = []
     N_reception8 = 8*N_reception
     N_reception11 = 11*N_reception
-    indiceAccroche = signalBinMan.find(motif)
+    listeIndicesAccroche = chercheMotifLevenshtein(signalBinMan, motif, maxErreursMotif, N_reception)
     
-    for k in range(N_reception11, 8*N_reception11, N_reception11):
-        if indiceAccroche != -1:
-            accrocheID = signalBinMan[indiceAccroche+N_reception8:indiceAccroche+N_reception11]
-            idBin = ''
-            for t in range(0, 3*N_reception, N_reception):
-                idBin += accrocheID[t]
-            id = codageBaseDix(idBin)
-            if 0 <= id < 8:
-                if role == 'start':
-                    start = indiceAccroche + (8 - id)*N_reception11  # 11 = taille de chaque répétition avec son id, 8 = nombre de répétition de l'accroche
-                    positionAccroche.append(start)
-                    indiceAccroche = signalBinMan.find(motif, indiceAccroche + k)
-                elif role == 'end':
-                    end = indiceAccroche - id*N_reception11
-                    positionAccroche.append(end)
-                    indiceAccroche = signalBinMan.find(motif, indiceAccroche + k)
-                else:
-                    print(f'Erreur : {role} n\'est pas un role valide (start ou end)')
+    if listeIndicesAccroche == []:
+        print(f"Erreur pas d'accroche {role} trouvée")
+        return -1
+    for indiceAccroche in listeIndicesAccroche:
+        accrocheID = signalBinMan[indiceAccroche+N_reception8:indiceAccroche+N_reception11]
+        idBin = ''
+        for indiceID in range(0, 2*N_reception, N_reception):
+            idBin += mostCommon(accrocheID[indiceID:indiceID+N_reception], 'int')
+        id = codageBaseDix(idBin)
+        if 0 <= id < 8:
+            if role == 'start':
+                start = indiceAccroche + (8 - id)*N_reception11  # 11 = taille de chaque répétition avec son id, 8 = nombre de répétition de l'accroche
+                positionAccroche.append(start)
+            elif role == 'end':
+                end = indiceAccroche - id*N_reception11
+                positionAccroche.append(end)
             else:
-                print('Erreur : id pas dans intervalle')
+                print(f'Erreur : {role} n\'est pas un role valide (start ou end)')
+                return -1
         else:
-            numero = k/N_reception11
-            print(f'Erreur : accroche (hors id) numéro {numero} pas trouvée')
-    if positionAccroche == []:
-        return 'Message corrompu, aucune accroche trouvée'
-    else:
-        return mostCommon(positionAccroche, 'int')  # Donne l'élément le plus commun de la liste
+            print('Erreur : id pas dans intervalle (pas grave)')
+    return mostCommon(positionAccroche, 'int') # Donne l'élément le plus commun de la liste
 
-def detectionAccroche(signalBinMan:str, N_reception:int, startMan:str, endMan:str) -> str:
+def detectionAccroche(signalBinMan:str, N_reception:int, startMan:str, endMan:str, maxErreursMotif:int) -> str:
     # rajouter décodage du code correcteur + si trop de bruit, redemander l'envoie des données
     startDoublonsMan = ''
     endDoublonsMan = ''
@@ -197,14 +199,14 @@ def detectionAccroche(signalBinMan:str, N_reception:int, startMan:str, endMan:st
         for element in motifStart:
             f.write(f"{element}")
 
-    start = position(signalBinMan, N_reception, motifStart, 'start')
-    end = position(signalBinMan, N_reception, motifEnd, 'end')
+    start = position(signalBinMan, N_reception, motifStart, 'start', maxErreursMotif)
+    end = position(signalBinMan, N_reception, motifEnd, 'end', maxErreursMotif)
 
     return signalBinMan[start:end]
 
-def demodulation(tension:list, N_reception:int, nb_bits:int, startMan:str, endMan:str) -> str:
-    tension = tension[0]  # super bizarre sys.entree me renvoie une liste avec une seule liste tension à l'intérieur (liste de liste)
-    tension = tension[::-1]  # pour remettre le message à l'endroit
+def demodulation(tension:list, N_reception:int, nb_bits:int, startMan:str, endMan:str, maxErreursMotif:int) -> str:
+    tension = tension[0] # super bizarre sys.entree me renvoie une liste avec une seule liste tension à l'intérieur (liste de liste)
+    tension = tension[::-1] # pour remettre le message à l'endroit
     tension = np.array([np.round(element, 1) for element in tension]) # on arrondit les éléments pour la suite
     
     with open("tension.txt", "w", encoding="utf-8") as f:
@@ -217,13 +219,13 @@ def demodulation(tension:list, N_reception:int, nb_bits:int, startMan:str, endMa
         for element in signalBinMan:
             f.write(f"{element}\n")
 
-    messageBinManDouble = detectionAccroche(signalBinMan, N_reception, startMan, endMan)  # chaque bit est répété N_reception fois par rapport au message Man envoyé, on veut enlever les doublons
+    messageBinManDouble = detectionAccroche(signalBinMan, N_reception, startMan, endMan, maxErreursMotif) # chaque bit est répété N_reception fois par rapport au message Man envoyé, on veut enlever les doublons
 
-    messageBinMan = ''  # on enlève les doublons
+    messageBinMan = '' # on enlève les doublons
     valeursBit = [int(messageBinManDouble[0])]
     for indice in range(1, len(messageBinManDouble)):
         if indice % N_reception == 0:
-            messageBinMan += mostCommon(valeursBit, 'str')  # Donne l'élément le plus commun de la liste
+            messageBinMan += mostCommon(valeursBit, 'str') # Donne l'élément le plus commun de la liste
             valeursBit = [int(messageBinManDouble[indice])]
         else:
             valeursBit.append(int(messageBinManDouble[indice]))
@@ -231,10 +233,10 @@ def demodulation(tension:list, N_reception:int, nb_bits:int, startMan:str, endMa
 
 def decodageMan(messageBinMan:str) -> str:
     messageBin = ''
-    for k in range(0, len(messageBinMan), 2):  # car un 0 est codé par N points et pas de 2 car on saute la transition
-        if messageBinMan[k] == '0':  # transition 0 --> 1
+    for k in range(0, len(messageBinMan), 2): # car un 0 est codé par N points et pas de 2 car on saute la transition
+        if messageBinMan[k] == '0': # transition 0 --> 1
             messageBin += '1'
-        else:  # transition 1 --> 0
+        else: # transition 1 --> 0
             messageBin += '0'
     return messageBin
 
@@ -244,5 +246,5 @@ def decodageASCII(messageBin:str) -> str:
         messageTransmis += chr(codageBaseDix(messageBin[posLettre:posLettre+8]))
     return messageTransmis
 
-def reception(tension:list, N_reception:int, nb_bits:int, startMan:str, endMan:str) -> str:
-    return decodageASCII(decodageMan(demodulation(tension, N_reception, nb_bits, startMan, endMan)))
+def reception(tension:list, N_reception:int, nb_bits:int, startMan:str, endMan:str, maxErreursMotif:int) -> str:
+    return decodageASCII(decodageMan(demodulation(tension, N_reception, nb_bits, startMan, endMan, maxErreursMotif)))
