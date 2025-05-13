@@ -59,13 +59,17 @@ def emission(message:str, tensionMin:int, tensionMax:int, N:int, startMan:str, e
 # Partie réception
 # ATTENTION le message sera à l'envers car les infos envoyées en premières seront reçues en première
 
-def codageBaseDix(messageBin:str) -> int:  # ATTENTION message à l'endroit (droites petites puissances) comme dit précédemment
+def codageBaseDix(lettre:str) -> int:  # ATTENTION message à l'endroit (droites petites puissances) comme dit précédemment
     asciiDecimal = 0
-    for k in range(len(messageBin)):
-        asciiDecimal += int(messageBin[k]) * (2 ** k)  # A VERIFIER (n-k) au lieu de k
+    for k in range(len(lettre)):
+        asciiDecimal += int(lettre[k]) * (2 ** k)  # A VERIFIER (n-k) au lieu de k
     return asciiDecimal
 
 def mostCommon(liste:list, type:str):
+    if liste == []:
+        print('Erreur : la liste est vide')
+        return -1
+    
     dict = {}
     for element in liste:
         if element not in dict:
@@ -110,7 +114,7 @@ def voltageToBinary(tension:list, N_reception:int, nb_bits:int) -> str:
 
         if tensionMax == 0:
             signalBinMan += '0'*len(morceau)
-        elif (tensionMax - tensionMin) < 0.5:
+        elif (tensionMax - tensionMin) < 0.4:
             print(f'Attention le morceau CODANT {morceau} dans voltageToBinary ne possède pas de variation de tension')
             signalBinMan += '0'*len(morceau) # Arbitraire on aurait pu prendre 1
         else:
