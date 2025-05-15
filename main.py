@@ -6,33 +6,28 @@ sys = pycan.Sysam("SP5")
 
 # PARAMETRES EMISSION
 
-techantSortie = 1e-4  # période d'échantillonnage en secondes
-temissionBit = 5e-3
-N = int(temissionBit/techantSortie)  # nombre de points représentant 1 bit
+techantSortie = 1e-3 # période d'échantillonnage en secondes
+temissionBit = 1e-2
+N = int(temissionBit/techantSortie) # nombre de points représentant 1 bit
 (tensionMin, tensionMax) = (0, 5)
 # message = input("Message à envoyer : ")
 message = 'jellooo'
 startMan = codageManchester(creationAccroche('a'))
 endMan = codageManchester(creationAccroche('z'))
-print(N)
 signal = emission(message, tensionMin, tensionMax, N, startMan, endMan)
 
-with open("emission.txt", "w", encoding="utf-8") as f:
-        for element in signal:
-            f.write(f"{element}\n")
-
-sys.config_sortie(1, techantSortie*1e6, signal)  # en microsecondes et non périodique
+sys.config_sortie(1, techantSortie*1e6, signal) # en microsecondes et non périodique
 sys.declencher_sorties(1, 0)
 
-# PARAMETRE RECEPTION
+# PARAMETRES RECEPTION
 
-techantEntree = 15e-6  # période d'échantillonnage en secondes
-tempsReception = 2.5  # en secondes
+techantEntree = 1e-3 # période d'échantillonnage en secondes
+tempsReception = 5 # en secondes
 nbpoints = int(tempsReception/techantEntree)
 N_reception = int(temissionBit/techantEntree) # IDEALEMENT IMPAIR POUR MOSTCOMMON()
 
-sys.config_entrees([2], [10])  # attention 10 V max
-sys.config_echantillon(techantEntree*1e6, nbpoints)  # période d'échantillonnage en microsecondes
+sys.config_entrees([2], [10]) # attention 10 V max
+sys.config_echantillon(techantEntree*1e6, nbpoints) # période d'échantillonnage en microsecondes
 sys.config_quantification(12)
 
 
@@ -50,9 +45,11 @@ sys.fermer()
 
 # Résultats
 
+print(N)
 print(N_reception)
+print(startMan)
 
-demodule = demodulation(tensions, N_reception, 65, startMan, endMan, 2*N_reception)
+demodule = demodulation(tensions, N_reception, startMan, endMan, 2*N_reception) # 2 bits faux
 print(demodule)
 decode = decodageMan(demodule)
 print(decode)
