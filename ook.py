@@ -62,10 +62,10 @@ def ook(messageMan:str, tensionMin:int, tensionMax:int, N:int) -> list:
     on utilise la modulation on-off keying (OOK)
     """
     tension = []
-    for byte in messageMan:
-        if byte == '0':
+    for bit in messageMan:
+        if bit == '0':
             tension += [tensionMin]*N
-        elif byte == '1':
+        elif bit == '1':
             tension += [tensionMax]*N
         else:
             print('Erreur : le message binaire est corrompu, une valeur autre que 0 et 1 a été trouver')
