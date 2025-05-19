@@ -236,7 +236,7 @@ def detectionAccroche(signalBinMan:str, N_reception:int, startMan:str, endMan:st
     start = position(signalBinMan, N_reception, motifStart, 'start', maxErreursMotif)
     end = position(signalBinMan, N_reception, motifEnd, 'end', maxErreursMotif)
     
-    if end >= start:
+    if end <= start:
         print("Erreur dans la position des accroches trouvées")
 
     return signalBinMan[start:end]
@@ -247,6 +247,7 @@ def demodulation(tension:list, N_reception:int, startMan:str, endMan:str, maxErr
     on enlève les répétitions causé par la fréquence d'échantillonnage N_reception
     si les valeurs sont légérement différente, on prend la plus commune
     """
+    print(tension)
     tension = tension[0] #sys.entree me renvoie une liste avec un tableau unidimensionnel de tension à l'intérieur
     tension = np.array([np.round(element, 1) for element in tension]) # on arrondit les éléments pour la suite
     print(len(tension))
