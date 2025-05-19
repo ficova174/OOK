@@ -28,7 +28,7 @@ def encodage(message:str) -> str:
 
 def creationAccroche(lettre:str, nombreRepetitions) -> str:
     """
-    on créée une succesion improbable
+    on créée une succession improbable
     """
     return encodage(lettre)*nombreRepetitions
 
