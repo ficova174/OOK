@@ -127,6 +127,16 @@ def voltageToBinary(tension:list, N_reception:int) -> str:
                     signalBinMan += '0'
     return signalBinMan
 
+def demodulation(tension:list, N_reception:int, start:str, end:str, maxErreursAccroche:int) -> str:
+    """
+    on extraie le message binaire (sans les accroches) de la liste des tensions
+    """
+    tension = tension[0] #sys.entree me renvoie une liste avec un tableau unidimensionnel de tension à l'intérieur
+    tension = np.round(tension, 2) # on arrondit les éléments pour la suite
+
+    signalBinMan = voltageToBinary(tension, N_reception)
+    return signalBinMan
+
 def decodageMan(signalBinMan:str) -> str:
     """
     se référer à l'illustration sur Wikipedia de la page sur le codage Manchester (version anglophone)
@@ -180,19 +190,6 @@ def detectionAccroche(signalBin:str, start:str, end:str, maxErreursAccroche:int)
 
     return signalBin[start:end]
 
-def demodulation(tension:list, N_reception:int, start:str, end:str, maxErreursAccroche:int) -> str:
-    """
-    on extraie le message binaire (sans les accroches) de la liste des tensions
-    """
-    tension = tension[0] #sys.entree me renvoie une liste avec un tableau unidimensionnel de tension à l'intérieur
-    tension = np.round(tension, 2) # on arrondit les éléments pour la suite
-
-    signalBinMan = voltageToBinary(tension, N_reception)
-    signalBin = decodageMan(signalBinMan)
-    messageBin = detectionAccroche(signalBin, start, end, maxErreursAccroche)
-
-    return messageBin
-
 def decodageASCII(messageBin:str) -> str:
     """
     message binaire -> texte ASCII
@@ -203,4 +200,7 @@ def decodageASCII(messageBin:str) -> str:
     return messageTransmis
 
 def reception(tension:list, N_reception:int, start:str, end:str, maxErreursAccroche:int) -> str:
-    return decodageASCII(demodulation(tension, N_reception, start, end, maxErreursAccroche))
+    signalBinMan = demodulation(tension, N_reception, start, end, maxErreursAccroche)
+    signalBin = decodageMan(signalBinMan)
+    messageBin = detectionAccroche(signalBin, start, end, maxErreursAccroche)
+    return decodageASCII(messageBin)
