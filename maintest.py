@@ -13,11 +13,9 @@ N = int(temissionBit/techantSortie) # nombre de points représentant 1 bit
 # message = input("Message à envoyer : ")
 message = 'jellooo'
 (start, end) = creationAccroche('a', 'z', 10)
+(startMan, endMan) = (codageManchester(start), codageManchester(end))
 
-messageMan = codageManchester(start + message + end)
-(startMan, endMan) = (messageMan[:len(start)*2], messageMan[:len(end)*2])
-
-signal = emission(message, tensionMin, tensionMax, N, start, end)
+signal = emission(message, tensionMin, tensionMax, N, startMan, endMan)
 
 sys.config_sortie(1, techantSortie*1e6, signal) # en microsecondes et non périodique
 sys.declencher_sorties(1, 0)

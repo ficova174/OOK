@@ -68,8 +68,8 @@ def ook(messageMan:str, tensionMin:int, tensionMax:int, N:int) -> np.ndarray:
             return np.array([])
     return np.array(tension, dtype=np.float32)
 
-def emission(message:str, tensionMin:int, tensionMax:int, N:int, start:str, end:str) -> np.ndarray:
-    messageMan = codageManchester(start + message + end)
+def emission(message:str, tensionMin:int, tensionMax:int, N:int, startMan:str, endMan:str) -> np.ndarray:
+    messageMan = startMan + codageManchester(message) + endMan
     return ook(messageMan, tensionMin, tensionMax, N)
 
 # Partie réception
@@ -195,7 +195,7 @@ def detectionAccroche(signalBinMan:str, startDoublonsMan:str, endDoublonsMan:str
 
     return (startPos, endPos)
 
-def demodulation(tension:np.ndarray, N_reception:int, startMan:str, endMan:str, maxErreursMotif:int) -> str:
+def demodulation(tension:np.ndarray, N_reception:int, startMan:str, endMan:str, maxErreursMotif:int):
     """
     on extraie le message binaire (sans les accroches) de la liste des tensions
     on enlève les répétitions causé par la fréquence d'échantillonnage N_reception
@@ -217,8 +217,15 @@ def demodulation(tension:np.ndarray, N_reception:int, startMan:str, endMan:str, 
 
     messageBinMan = '' # on enlève les doublons
 
-    for indice in range(startPos+len(startDoublonsMan), endPos, N_reception):
-        messageBinMan += signalBinManDouble[indice]
+    valeursBit = [int(signalBinManDouble[startPos+len(startDoublonsMan)])]
+    indiceModulo = 1
+    for indice in range(startPos+len(startDoublonsMan), endPos-1): # -1 ???
+        if indiceModulo % N_reception == 0:
+            messageBinMan += mostCommon(valeursBit, 'str')
+            valeursBit = [int(signalBinManDouble[indice])]
+        else:
+            valeursBit.append(int(signalBinManDouble[indice]))
+        indiceModulo += 1
     return messageBinMan
 
 def decodageMan(messageBinMan:str) -> str:
