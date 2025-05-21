@@ -69,7 +69,7 @@ plt.legend()
 # Ce que l'on reçoit
 
 plt.figure()
-plt.scatter(temps[0], tensions[0], label="EA2", s=1)
+plt.scatter(temps[0], tension[0], label="EA2", s=1)
 plt.xlabel("t (s)")
 plt.ylabel("u (V)")
 plt.grid()

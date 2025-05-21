@@ -186,14 +186,7 @@ def chercheIndicesAccroche(signalBinMan:str, motif:str, maxErreursMotif:int) -> 
         print('Pas d\'accroche trouvée')
     return indiceAccroche
 
-def detectionAccroche(signalBinMan:str, N_reception:int, startMan:str, endMan:str, maxErreursMotif:int) -> tuple:
-    startDoublonsMan = ""
-    endDoublonsMan = ""
-
-    for k in range(len(startMan)):
-        startDoublonsMan += N_reception * startMan[k]
-        endDoublonsMan += N_reception * endMan[k]
-
+def detectionAccroche(signalBinMan:str, startDoublonsMan:str, endDoublonsMan:str, maxErreursMotif:int) -> tuple:
     startPos = chercheIndicesAccroche(signalBinMan, startDoublonsMan, maxErreursMotif)
     endPos = chercheIndicesAccroche(signalBinMan, endDoublonsMan, maxErreursMotif)
     
@@ -202,7 +195,7 @@ def detectionAccroche(signalBinMan:str, N_reception:int, startMan:str, endMan:st
 
     return (startPos, endPos)
 
-def demodulation(tension:np.ndarray, N_reception:int, startMan:str, endMan:str, maxErreursMotif:int):
+def demodulation(tension:np.ndarray, N_reception:int, startMan:str, endMan:str, maxErreursMotif:int) -> str:
     """
     on extraie le message binaire (sans les accroches) de la liste des tensions
     on enlève les répétitions causé par la fréquence d'échantillonnage N_reception
@@ -213,28 +206,30 @@ def demodulation(tension:np.ndarray, N_reception:int, startMan:str, endMan:str, 
 
     signalBinManDouble = voltageToBinary(tension, N_reception)
 
-    (startPos, endPos) = detectionAccroche(signalBinManDouble, N_reception, startMan, endMan, maxErreursMotif) # chaque bit est répété N_reception fois par rapport au message Man envoyé
+    startDoublonsMan = ""
+    endDoublonsMan = ""
+
+    for k in range(len(startMan)):
+        startDoublonsMan += N_reception * startMan[k]
+        endDoublonsMan += N_reception * endMan[k]
+
+    (startPos, endPos) = detectionAccroche(signalBinManDouble, startDoublonsMan, endDoublonsMan, maxErreursMotif) # chaque bit est répété N_reception fois par rapport au message Man envoyé
 
     messageBinMan = '' # on enlève les doublons
 
-    valeursBit = [int(signalBinManDouble[0])]
-    for indice in range(1, len(signalBinManDouble)):
-        if indice % N_reception == 0:
-            messageBinMan += mostCommon(valeursBit, 'str')
-            valeursBit = [int(signalBinManDouble[indice])]
-        else:
-            valeursBit.append(int(signalBinManDouble[indice]))
-    return (messageBinMan, startPos, endPos)
+    for indice in range(startPos+len(startDoublonsMan), endPos, N_reception):
+        messageBinMan += signalBinManDouble[indice]
+    return messageBinMan
 
-def decodageMan(messageBinMan:str, startPos:int, endPos:int) -> str:
+def decodageMan(messageBinMan:str) -> str:
     """
     se référer à l'illustration sur Wikipedia de la page sur le codage Manchester (version anglophone)
     et à l'utilisation de XOR
     """
-    horloge = [k%2 for k in range(1, len(messageBinMan[startPos:endPos])+1)] # On commence à 1 pour que l'horloge commence par 1
+    horloge = [k%2 for k in range(1, len(messageBinMan)+1)] # On commence à 1 pour que l'horloge commence par 1
     messageBinTemp = ''
 
-    for indice in range(startPos, endPos):
+    for indice in range(len(messageBinMan)):
         if horloge[indice] == messageBinMan[indice]:
             messageBinTemp += '0'
         else:
@@ -259,6 +254,6 @@ def decodageASCII(messageBin:str) -> str:
     return messageTransmis
 
 def reception(tension:np.ndarray, N_reception:int, startMan:str, endMan:str, maxErreursMotif:int) -> str:
-    (messageBinMan, startPos, endPos) = demodulation(tension, N_reception, startMan, endMan, maxErreursMotif)
-    messageBin = decodageMan(messageBinMan, startPos, endPos)
+    messageBinMan = demodulation(tension, N_reception, startMan, endMan, maxErreursMotif)
+    messageBin = decodageMan(messageBinMan)
     return decodageASCII(messageBin)
