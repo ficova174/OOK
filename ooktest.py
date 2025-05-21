@@ -226,6 +226,8 @@ def demodulation(tension:np.ndarray, N_reception:int, startMan:str, endMan:str, 
         else:
             valeursBit.append(int(signalBinManDouble[indice]))
         indiceModulo += 1
+    messageBinMan += mostCommon(valeursBit, 'str')
+    
     return messageBinMan
 
 def decodageMan(messageBinMan:str) -> str:
