@@ -56,7 +56,7 @@ def codageManchester(messageBin:str) -> str:
                 messageMan += "0"
     return messageMan
 
-def ook(messageMan:str, tensionMin:int, tensionMax:int, N:int) -> list:
+def ook(messageMan:str, tensionMin:int, tensionMax:int, N:int) -> np.ndarray:
     """
     transforme le message codé (Manchester) en valeurs de tension pour les LEDS
     on utilise la modulation on-off keying (OOK)
@@ -72,7 +72,7 @@ def ook(messageMan:str, tensionMin:int, tensionMax:int, N:int) -> list:
             return []
     return np.array(tension, dtype=np.float32)
 
-def emission(message:str, tensionMin:int, tensionMax:int, N:int, startMan:str, endMan:str) -> list:
+def emission(message:str, tensionMin:int, tensionMax:int, N:int, startMan:str, endMan:str) -> np.ndarray:
     messageMan = startMan + codageManchester(encodage(message, 8)) + endMan # accroches ajoutées au message
     return ook(messageMan, tensionMin, tensionMax, N)
 
@@ -88,7 +88,7 @@ def codageBaseDix(byte:str) -> int:
         asciiDecimal += int(byte[bit]) * (2 ** bit) # A VERIFIER (n-k) au lieu de k
     return asciiDecimal
 
-def mostCommon(liste:list, type:str):
+def mostCommon(liste:list | str, type:str) -> (None | float | int | str):
     """
     trouve l'élément le plus commun d'une liste
     on peut choisir le datatype renvoyé
@@ -185,6 +185,21 @@ def chercheIndicesAccroche(signalBinMan:str, motif:str, maxErreursMotif:int) -> 
             listeIndicesAccroche.append(indice)
     return listeIndicesAccroche
 
+def recoverClock(signalBinMan:str, indiceMotif:int):
+    horloge = [k%2 for k in range(1, 2*len(signalBinMan)+1)] # On commence à 1 pour que l'horloge commence par 1
+
+def decodageMan(messageBinMan:str) -> str:
+    """
+    se référer à l'illustration sur Wikipedia de la page sur le codage Manchester (version anglophone)
+    """
+    messageBin = ''
+    for k in range(0, len(messageBinMan), 2): # pas de 2 car on saute la transition
+        if messageBinMan[k] == '0': # transition 0 --> 1
+            messageBin += '1'
+        else: # transition 1 --> 0
+            messageBin += '0'
+    return messageBin
+
 def position(signalBinMan:str, N_reception:int, motif:str, role:str, maxErreursMotif:int) -> int:
     """
     prédis la position de début/fin du message dans signalBinMan grâce à l'identifiant des accroches
@@ -203,7 +218,7 @@ def position(signalBinMan:str, N_reception:int, motif:str, role:str, maxErreursM
         idBin = ''
         for indiceID in range(0, 2*N_reception, N_reception):
             idBin += mostCommon(accrocheID[indiceID:indiceID+N_reception], 'str')
-        id = codageBaseDix(idBin)
+        id = codageBaseDix(decodageMan(idBin))
         if 0 <= id < 8:
             if role == 'start':
                 start = indiceAccroche + (8 - id)*N_reception22 # 22 = taille de chaque accroche après codage Manchester, 8 = nombre de motifs de l'accroche
@@ -267,18 +282,6 @@ def demodulation(tension:list, N_reception:int, startMan:str, endMan:str, maxErr
             valeursBit.append(int(messageBinManDouble[indice]))
     return messageBinMan
 
-def decodageMan(messageBinMan:str) -> str:
-    """
-    se référer à l'illustration sur Wikipedia de la page sur le codage Manchester (version anglophone)
-    """
-    messageBin = ''
-    for k in range(0, len(messageBinMan), 2): # pas de 2 car on saute la transition
-        if messageBinMan[k] == '0': # transition 0 --> 1
-            messageBin += '1'
-        else: # transition 1 --> 0
-            messageBin += '0'
-    return messageBin
-
 def decodageASCII(messageBin:str) -> str:
     """
     message binaire -> texte ASCII
@@ -289,4 +292,6 @@ def decodageASCII(messageBin:str) -> str:
     return messageTransmis
 
 def reception(tension:list, N_reception:int, startMan:str, endMan:str, maxErreursMotif:int) -> str:
-    return decodageASCII(decodageMan(demodulation(tension, N_reception, startMan, endMan, maxErreursMotif)))
+    messageBinMan = demodulation(tension, N_reception, startMan, endMan, maxErreursMotif)
+    messageBin = decodageMan(messageBinMan)
+    return decodageASCII(messageBin)

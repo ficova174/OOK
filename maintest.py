@@ -9,12 +9,15 @@ sys = pycan.Sysam("SP5")
 techantSortie = 1e-3 # période d'échantillonnage en secondes
 temissionBit = 1e-2
 N = int(temissionBit/techantSortie) # nombre de points représentant 1 bit
-tensionMax = 5
+(tensionMin, tensionMax) = (0, 5)
 # message = input("Message à envoyer : ")
 message = 'jellooo'
-start = creationAccroche('a')
-end = creationAccroche('z')
-signal = emission(message, tensionMax, N, start, end)
+(start, end) = creationAccroche('a', 'z', 10)
+
+messageMan = codageManchester(start + message + end)
+(startMan, endMan) = (messageMan[:len(start)*2], messageMan[:len(end)*2])
+
+signal = emission(message, tensionMin, tensionMax, N, start, end)
 
 sys.config_sortie(1, techantSortie*1e6, signal) # en microsecondes et non périodique
 sys.declencher_sorties(1, 0)
@@ -25,6 +28,7 @@ techantEntree = 1e-3 # période d'échantillonnage en secondes
 tempsReception = 5 # en secondes
 nbpoints = int(tempsReception/techantEntree)
 N_reception = int(temissionBit/techantEntree) # IDEALEMENT IMPAIR POUR MOSTCOMMON()
+maxErreursMotif = int((N_reception*len(startMan))/10)
 
 sys.config_entrees([2], [10]) # attention 10 V max
 sys.config_echantillon(techantEntree*1e6, nbpoints) # période d'échantillonnage en microsecondes
@@ -39,23 +43,17 @@ sys.stopper_sorties(1, 0)
 
 # Ce que l'on reçoit
 temps = sys.temps()
-tensions = sys.entrees()
+tension = sys.entrees()
 sys.fermer()
 
 
 # Résultats
 
-print(N)
-print(N_reception)
-print(start)
-
-print(reception(tensions, N_reception, start, end, 5))
-
-# print(reception(tensions, N_reception, 65, startMan, endMan, 2*N_reception))
+print(reception(tension, N_reception, startMan, endMan, maxErreursMotif))
 
 # Ce qu'on envoie aux LEDs
 
-t = [1]*len(signal)
+t = [1.0]*len(signal)
 c=1
 for k in range(len(t)):
     t[k] = techantSortie*c
