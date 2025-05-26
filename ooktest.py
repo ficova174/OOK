@@ -27,7 +27,7 @@ def encodage(message:str) -> str:
         messageBin += codageBinaire(lettre)
     return messageBin
 
-def creationAccroche(lettre1:str, lettre2:str, repetitions:int) -> tuple:
+def creationAccroches(lettre1:str, lettre2:str, repetitions:int) -> tuple:
     """
     on créée une succesion improbable
     on lui donne un identifiant pour estimer le début du message (fonction detectionAccroche())
@@ -69,7 +69,7 @@ def ook(messageMan:str, tensionMin:int, tensionMax:int, N:int) -> np.ndarray:
     return np.array(tension, dtype=np.float32)
 
 def emission(message:str, tensionMin:int, tensionMax:int, N:int, startMan:str, endMan:str) -> np.ndarray:
-    messageMan = startMan + codageManchester(message) + endMan
+    messageMan = startMan + codageManchester(encodage(message)) + endMan
     return ook(messageMan, tensionMin, tensionMax, N)
 
 # Partie réception

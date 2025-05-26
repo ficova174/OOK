@@ -12,7 +12,7 @@ N = int(temissionBit/techantSortie) # nombre de points représentant 1 bit
 (tensionMin, tensionMax) = (0, 5)
 # message = input("Message à envoyer : ")
 message = 'jellooo'
-(start, end) = creationAccroche('a', 'z', 10)
+(start, end) = creationAccroches('a', 'z', 10)
 (startMan, endMan) = (codageManchester(start), codageManchester(end))
 
 signal = emission(message, tensionMin, tensionMax, N, startMan, endMan)
