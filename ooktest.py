@@ -161,7 +161,7 @@ def voltageToBinary(tension:np.ndarray, N_reception:int) -> str:
                     signalBinMan += '0'
     return signalBinMan
 
-def chercheIndicesAccroche(signalBinMan:str, motif:str, maxErreursMotif:int) -> int:
+def chercheIndicesAccroche(signalBinMan:str, role:str, motif:str, maxErreursMotif:int) -> int:
     """
     on cherche l'accroche, or celle-ci n'a pas été transmise parfaitement
     on doit alors accepter un certains nombre d'erreurs dans le motif de l'accroche (id pas de problème)
@@ -169,24 +169,31 @@ def chercheIndicesAccroche(signalBinMan:str, motif:str, maxErreursMotif:int) -> 
     on renvoie la liste des indices de début des motifs avec autant ou moins d'erreurs que maxErreurMotif
     chaque bit est répété N_reception fois (la période d'échantillonage)
     """
-    indiceAccroche = -1
+    indiceAccroche = []
     motifBits = bitarray(motif)
-    compteur = 0
     for indice in range(len(signalBinMan)-len(motif)):
         signalBits = bitarray(signalBinMan[indice:indice+len(motif)])
         nombreErreurs = (signalBits ^ motifBits).count() # ^ représente l'opérateur XOR
         if nombreErreurs <= maxErreursMotif:
-            indiceAccroche = indice
-            compteur += 1
-    if compteur != 1:
-        print('Plus d\'une accroche trouvée')
-    if indiceAccroche == -1:
-        print('Pas d\'accroche trouvée')
+            indiceAccroche.append(indice)
+    if len(indiceAccroche) != 1:
+        print('Plus ou aucune accroche trouvée')
+        print(indiceAccroche)
+        return -1
+    
+    if role == 'start':
+        indiceAccroche = indiceAccroche[-1]
+    elif role == 'end':
+        indiceAccroche = indiceAccroche[0]
+    else:
+        print('Mauvais rôle d\'accroche sélectionné')
+        return -1
+
     return indiceAccroche
 
 def detectionAccroche(signalBinMan:str, startDoublonsMan:str, endDoublonsMan:str, maxErreursMotif:int) -> tuple:
-    startPos = chercheIndicesAccroche(signalBinMan, startDoublonsMan, maxErreursMotif)
-    endPos = chercheIndicesAccroche(signalBinMan, endDoublonsMan, maxErreursMotif)
+    startPos = chercheIndicesAccroche(signalBinMan, 'start', startDoublonsMan, maxErreursMotif)
+    endPos = chercheIndicesAccroche(signalBinMan, 'end', endDoublonsMan, maxErreursMotif)
     
     if endPos <= startPos:
         print("Erreur dans la position des accroches trouvées")
