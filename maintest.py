@@ -54,7 +54,7 @@ print(reception(tension, N_reception, startMan, endMan, maxErreursMotif))
 t = [1.0]*len(signal)
 c=1
 for k in range(len(t)):
-    t[k] = techantSortie*c
+    t[k] = int(techantSortie*c)
     c += 1
 
 plt.figure()

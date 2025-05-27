@@ -19,7 +19,6 @@ def codageBinaire(nombre:int) -> str:
 def encodage(message:str) -> str:
     """
     message texte (str) -> message en binaire (str)
-    on demande la taille des paquets car on utilisera cette fonction pour coder des strings de longueur variable (accroche et ID)
     """
     messageBin = ''
     for lettre in message:
@@ -146,7 +145,6 @@ def voltageToBinary(tension:np.ndarray, N_reception:int) -> str:
     for morceau in dividedSignal:
         tensionMax = np.max(morceau)
         tensionMin = np.min(morceau)
-
         if tensionMax == 0:
             signalBinMan += '0'*len(morceau)
         elif (tensionMax - tensionMin) < 0.5:
@@ -219,7 +217,7 @@ def demodulation(tension:np.ndarray, N_reception:int, startMan:str, endMan:str, 
 
     valeursBit = [int(signalBinManDouble[startPos+len(startDoublonsMan)])]
     indiceModulo = 1
-    for indice in range(startPos+len(startDoublonsMan), endPos-1): # -1 ???
+    for indice in range(startPos+len(startDoublonsMan), endPos): # -1 ???
         if indiceModulo % N_reception == 0:
             messageBinMan += mostCommon(valeursBit, 'str')
             valeursBit = [int(signalBinManDouble[indice])]
@@ -243,9 +241,6 @@ def decodageMan(messageBinMan:str) -> str:
             messageBinTemp += '0'
         else:
             messageBinTemp += '1'
-    
-    if type(int(len(messageBinTemp))/2) != int:
-        print('len(messageBinTemp) n\'est pas paire')
 
     messageBin = ''
     for indice in range(0, len(messageBinTemp), 2): # Manchester double taille donc forcément paire
