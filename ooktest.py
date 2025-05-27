@@ -242,6 +242,9 @@ def decodageMan(messageBinMan:str) -> str:
         else:
             messageBinTemp += '1'
 
+    if len(messageBinMan) % 2 != 0:
+        print('len(messageBinTemp) n\'est pas paire')
+
     messageBin = ''
     for indice in range(0, len(messageBinTemp), 2): # Manchester double taille donc forcément paire
         messageBin += messageBinTemp[indice]
